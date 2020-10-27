@@ -1,0 +1,184 @@
+---
+title: "Homework 2"
+author: "Hannah Waddel"
+date: "September 5, 2019"
+output: word_document
+---
+```{r, echo=FALSE}
+library(KernSmooth)
+set.seed(11311441)
+```
+
+## Problem 1 (5.2)
+```{r, echo=FALSE}
+n.sim <- 100
+n.events <- 60
+lambda <- 60
+skellam.constant <- rep(0,n.sim)
+
+for(i in 1:n.sim){
+  csr.x <- runif(n=n.events)
+  csr.y <- runif(n=n.events)
+  
+  mindist.csr <- rep(0,n.events)
+  for(j in 1:n.events){
+    dist <- sqrt( (csr.x[j] - csr.x)^2 + (csr.y[j] - csr.y)^2 )
+    mindist.csr[j] <- min(dist[dist!=0])
+  }
+  
+  skellam.constant[i] <- 2*pi*lambda*sum(mindist.csr^2)
+}
+
+hist(skellam.constant,main="Skellam for CSR data, N Simulations=100, N Events=60",prob=T)
+curve(dchisq(x,df=120),col="red",add=T)
+```
+
+The modes are in a slightly different place, though the histograms appear similar. Skellam's statistic has a mode around 140, while the Chi-Squared distribution's mode is around 120.
+
+## Problem 2 (5.3)
+```{r, echo=FALSE}
+n.sim <- 100
+lambda.pois <- 60
+lambda <- 60
+skellam.pois <- rep(0,n.sim)
+
+for(i in 1:n.sim){
+  n.events <- rpois(1,lambda=lambda.pois)
+  csr.x <- runif(n=n.events)
+  csr.y <- runif(n=n.events)
+  
+  mindist.csr <- rep(0,n.events)
+  for(j in 1:n.events){
+    dist <- sqrt( (csr.x[j] - csr.x)^2 + (csr.y[j] - csr.y)^2 )
+    mindist.csr[j] <- min(dist[dist!=0])
+  }
+  
+  skellam.pois[i] <- 2*pi*lambda*sum(mindist.csr^2)
+}
+
+hist(skellam.pois,main="Skellam for CSR data, N Simulations=100, Lambda=60",prob=T,ylim=c(0,0.025))
+curve(dchisq(x,df=120),col="red",add=T)
+
+```
+
+For the two simulations, the number of events is either constant (N=60) or distributed as a Poission(lambda=60) variable. There does not appear to be much of a difference in the distributions of the two variables. Both peak around 140, and both are comparable to a Chi-Square distribution with 120 degrees of freedom. 
+
+## Problem 3 (5.5)
+The estimated values of $\lambda$ vary widely, and the value of the density function was as low as 0 and as high as 4.5 in this simulation. We can observe modes which may lead us to conclude that there is clustering based on one realization of the process. The estimated values of $\lambda$ are more variable when there are fewer realized events. This teaches us caution in drawing conclusions from one realization of a spatial process or a realization with very few events
+```{r, echo=FALSE}
+n.sim <- 6
+lambda.pois <- 10
+
+for(i in 1:n.sim){
+  n.events <- rpois(1,lambda=lambda.pois)
+  csr.x <- runif(n=n.events)
+  csr.y <- runif(n=n.events)
+  csr.mat <- cbind(csr.x,csr.y)
+  
+  bw.x <- dpik(csr.x)
+  bw.y <- dpik(csr.y)
+  
+  kern.est <- bkde2D(csr.mat,bandwidth=c(bw.x,bw.y),range.x = list(c(0,1),c(0,1)))  
+  par(pty="s")
+  contour(kern.est$x1,kern.est$x2,kern.est$fhat,drawlabels=F,main=paste0("Intensity, Gaussian, bw=(",round(bw.x,2),", ",round(bw.y,2),"), lambda=10"))
+  points(csr.x,csr.y,pch=20)
+  print(c(min(kern.est$fhat),max(kern.est$fhat)))
+}
+
+lambda.pois <- 20
+
+for(i in 1:n.sim){
+  n.events <- rpois(1,lambda=lambda.pois)
+  csr.x <- runif(n=n.events)
+  csr.y <- runif(n=n.events)
+  csr.mat <- cbind(csr.x,csr.y)
+  
+  bw.x <- dpik(csr.x)
+  bw.y <- dpik(csr.y)
+  
+  kern.est <- bkde2D(csr.mat,bandwidth=c(bw.x,bw.y),range.x = list(c(0,1),c(0,1)))  
+  par(pty="s")
+  contour(kern.est$x1,kern.est$x2,kern.est$fhat,drawlabels=F,main=paste0("Intensity, Gaussian, bw=(",round(bw.x,2),", ",round(bw.y,2),"), lambda=20"))
+  points(csr.x,csr.y,pch=20)
+  print(min(kern.est$fhat),max(kern.est$fhat))
+}
+
+lambda.pois <- 100
+
+for(i in 1:n.sim){
+  n.events <- rpois(1,lambda=lambda.pois)
+  csr.x <- runif(n=n.events)
+  csr.y <- runif(n=n.events)
+  csr.mat <- cbind(csr.x,csr.y)
+  
+  bw.x <- dpik(csr.x)
+  bw.y <- dpik(csr.y)
+  
+  kern.est <- bkde2D(csr.mat,bandwidth=c(bw.x,bw.y),range.x = list(c(0,1),c(0,1)))  
+  
+  par(pty="s")
+  contour(kern.est$x1,kern.est$x2,kern.est$fhat,drawlabels=F,main=paste0("Intensity, Gaussian, bw=(",round(bw.x,2),", ",round(bw.y,2),"), lambda=100"))
+  points(csr.x,csr.y,pch=20)
+  print(c(min(kern.est$fhat),max(kern.est$fhat)))
+}
+```
+
+## Problem 4 (5.6)
+```{r, echo=FALSE}
+intensity <- function(x,y){
+  return(3*exp(-((x-0.3)^2+(y-0.7)^2)))
+}
+
+granularity <- 101
+
+x.pt <- seq(from=0,to=1,length.out=granularity)
+y.pt <- seq(from=0,to=1,length.out=granularity)
+z.pt <- matrix(data=NA,nrow=granularity,ncol=granularity)
+for(i in 1:granularity){
+  for(j in 1:granularity){
+    z.pt[i,j] <- intensity(x.pt[i],y.pt[j])
+  }
+}
+
+contour(x.pt,y.pt,z.pt)
+
+n.events <- 60
+n.realizations <- 6
+
+for(i in 1:n.realizations){
+  csr.x <- c()
+  csr.y <- c()
+  max.lambda <- max(z.pt)
+  
+  while(length(csr.x) < n.events){
+    x.cand <- runif(1)
+    y.cand <- runif(1)
+    
+    w <- runif(1)
+    intens.xy <- intensity(x.cand,y.cand)
+    
+    if(w <= (intens.xy/max.lambda)){
+      csr.x <- c(csr.x,x.cand)
+      csr.y <- c(csr.y,y.cand)
+    }
+  }
+  
+  
+  csr.mat <- cbind(csr.x,csr.y)
+  
+  bw.x <- dpik(csr.x)
+  bw.y <- dpik(csr.y)
+  
+  kern.est <- bkde2D(csr.mat,bandwidth=c(bw.x,bw.y),range.x = list(c(0,1),c(0,1)))  
+  
+  par(pty="s")
+  contour(kern.est$x1,kern.est$x2,kern.est$fhat,drawlabels=F,main=paste0("Intensity, Gaussian, bw=(",round(bw.x,2),", ",round(bw.y,2),")"))
+  points(csr.x,csr.y,pch=20)
+  
+  where.max <- which(kern.est$fhat==max(kern.est$fhat),arr.ind=T)
+  contour(kern.est$x1,kern.est$x2,kern.est$fhat,drawlabels=F,main=paste0("Intensity, Gaussian, bw=(",round(bw.x,2),", ",round(bw.y,2),")"))
+  points(0.3,0.7,pch=3)
+  points(kern.est$x1[where.max[1]],kern.est$x2[where.max[2]],pch=7)
+}
+```
+
